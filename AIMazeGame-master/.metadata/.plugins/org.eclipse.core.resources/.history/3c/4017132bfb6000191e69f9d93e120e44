@@ -1,0 +1,13 @@
+package ie.gmit.sw.ai;
+
+public class Spider implements Runnable {
+
+	@Override
+	public void run() {
+		// TODO Auto-generated method stub
+		
+	}
+	
+
+	
+}

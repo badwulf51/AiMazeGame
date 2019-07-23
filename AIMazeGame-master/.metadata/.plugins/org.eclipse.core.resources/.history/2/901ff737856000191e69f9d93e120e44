@@ -1,0 +1,57 @@
+package ie.gmit.sw.ai;
+
+public class Spider {
+	
+    private ControlledSprite player;
+
+	private boolean isValidMove(int r, int c){
+        if(getPlayer().isGameOver()) return false;
+        if((r < 0) || (c < 0) || !(r <= getMaze().length - 1 && c <= getMaze()[r].length - 1)) return false;
+
+        switch(getMaze()[r][c].getNodeType()){
+            case ' ':
+                // Moving the enemy to an empty block
+                getMaze()[getRowPos()][getColPos()].setNodeType(' ');
+                getMaze()[r][c].setNodeType('E');
+                if(this.isBoss())
+                    getMaze()[r][c].setNodeType('F');
+                getMaze()[r][c].setEnemyID(getMaze()[getRowPos()][getColPos()].getEnemyID());
+                getMaze()[getRowPos()][getColPos()].setEnemyID(0);
+                return true;
+            case 'P':
+                // Starting a battle with the player using the fuzzy logic library
+                BattleLogic fuzzyBattle = new BattleLogic();
+                boolean enemyWon = fuzzyBattle.startBattle(getPlayer(), this, "fcl/fuzzyFight.fcl");
+                if(enemyWon == true){
+                    // The player has lost the game!
+                    getMaze()[getRowPos()][getColPos()].setNodeType(' ');
+                    getMaze()[getRowPos()][getColPos()].setEnemyID(0);
+                    getPlayer().setGameOver(true);
+                    getMaze()[r][c].setNodeType('L');
+                }else{
+                    getMaze()[getRowPos()][getColPos()].setNodeType('D');
+                    if(this.isBoss())
+                        getMaze()[getRowPos()][getColPos()].setNodeType('L');
+                    getMaze()[getRowPos()][getColPos()].setEnemyID(0);
+                    this.setHealth(0);
+                }
+                return enemyWon;
+            case 'T':
+                // Moving enemy over a path to goal node, removing the 'This Way!' block
+                getMaze()[getRowPos()][getColPos()].setNodeType(' ');
+                getMaze()[r][c].setNodeType('E');
+                if(this.isBoss())
+                    getMaze()[r][c].setNodeType('F');
+                getMaze()[r][c].setEnemyID(getMaze()[getRowPos()][getColPos()].getEnemyID());
+                getMaze()[getRowPos()][getColPos()].setEnemyID(0);
+                return true;
+            default:
+                return false;
+        }
+    }
+	
+	public ControlledSprite getPlayer() {
+        return player;
+    }
+	
+}

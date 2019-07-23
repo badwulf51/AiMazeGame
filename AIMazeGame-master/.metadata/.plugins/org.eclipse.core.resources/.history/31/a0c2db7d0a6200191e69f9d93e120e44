@@ -1,0 +1,75 @@
+package ie.gmit.sw.ai.searchAlgorithms;
+
+import java.util.*;
+
+import javax.swing.JOptionPane;
+
+import ie.gmit.sw.ai.Node;
+public class BruteForceTraversator implements Traversator{
+	private boolean dfs = false;
+	private int stepsToExit;
+	private boolean quitWhile = true;
+
+	
+	public BruteForceTraversator(boolean depthFirst){
+		this.dfs = depthFirst;
+	}
+	
+	public void traverse(Node[][] maze, Node node) {
+        long time = System.currentTimeMillis();
+    	int visitCount = 0;
+    	
+		Deque<Node> queue = new LinkedList<Node>();
+		queue.offer(node);
+		
+		while (!queue.isEmpty() && quitWhile == true){
+			node = queue.poll();
+			node.setVisited(true);
+			visitCount++;
+			
+			if (node.isGoalNode() && node.nodeType != 'P'){
+		        time = System.currentTimeMillis() - time; //Stop the clock
+		        //TraversatorStats.printStats(node, time, visitCount);
+		        System.out.println("In if");
+		        setStepsToExit(TraversatorStats.printStats(node, time, visitCount, false));
+				break;
+			}
+			
+			try { //Simulate processing each expanded node				
+				Thread.sleep(10);						
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			
+			Node[] children = node.children(maze);
+			for (int i = 0; i < children.length; i++) {
+				if (children[i] != null && !children[i].isVisited()){
+					children[i].setParent(node);
+					if (dfs){
+						queue.addFirst(children[i]);
+					}else{
+						queue.addLast(children[i]);
+					}
+				}									
+			}
+			if(visitCount > 100) {
+				System.out.println("Path is too long");
+				quitWhile = false;
+			}
+		}
+		System.out.println("out of while" + visitCount);
+		setStepsToExit(TraversatorStats.printStats(node, time, visitCount, false));
+        setFoundGoal(true);
+		setPathGoal(node);
+		JOptionPane.showMessageDialog(null, "I did not find the exit, this is the path I took", "InfoBox: " + "Unsuccessful...",
+				JOptionPane.INFORMATION_MESSAGE);
+	}
+	
+	public int getStepsToExit() {
+		return stepsToExit;
+	}
+
+	public void setStepsToExit(int stepsToExit) {
+		this.stepsToExit = stepsToExit;
+	}
+}

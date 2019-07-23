@@ -1,0 +1,17 @@
+package ie.gmit.sw.ai;
+
+public class Spider implements Runnable {
+
+	public Spider(int i, int health, int armor, int strength, int difficulty, boolean isBoss) {
+		// TODO Auto-generated constructor stub
+	}
+
+	@Override
+	public void run() {
+		// TODO Auto-generated method stub
+		
+	}
+	
+
+	
+}

@@ -1,0 +1,289 @@
+package ie.gmit.sw.ai;
+
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+
+import javax.imageio.ImageIO;
+import javax.swing.JPanel;
+import javax.swing.Timer;
+public class GameView extends JPanel implements ActionListener{
+	private static final long serialVersionUID = 1L;
+	public static final int DEFAULT_VIEW_SIZE = 900;	
+	private int cellspan;
+	private int cellpadding;
+	private int currentRow;
+	private int currentCol;
+	private boolean zoomOut;
+	private int imageIndex;
+	private int playerState;
+	private int enemyState;
+	private int enemyBossState;
+	private Node[][] maze;
+	private BufferedImage[] images;
+	private Timer timer;
+	private Sprite[] sprites;
+
+	public GameView() {
+	}
+
+	public GameView(GameSetup game, Sprite[] sprites) {
+		this.sprites = sprites;
+		init();
+		this.maze = game.getMaze();
+		this.imageIndex = -1;
+		this.playerState = 6; // Edit this later to animate the player.
+		this.enemyState = 7;
+		this.enemyBossState = 18;
+		this.cellspan = 5;
+		this.cellpadding = 2;
+		this.timer = new Timer(100, this);
+		this.timer.start();
+		setBackground(Color.LIGHT_GRAY);
+		setDoubleBuffered(true);
+	}
+	
+	public void setCurrentRow(int row) {
+		if (row < cellpadding){
+			currentRow = cellpadding;
+		}else if (row > (maze.length - 1) - cellpadding){
+			currentRow = (maze.length - 1) - cellpadding;
+		}else{
+			currentRow = row;
+		}
+	}
+
+	public void setCurrentCol(int col) {
+		if (col < cellpadding){
+			currentCol = cellpadding;
+		}else if (col > (maze.length - 1) - cellpadding){
+			currentCol = (maze.length - 1) - cellpadding;
+		}else{
+			currentCol = col;
+		}
+	}
+
+	public void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2 = (Graphics2D)g;
+              
+        cellspan = zoomOut ? maze.length : 5;         
+        final int size = DEFAULT_VIEW_SIZE/cellspan;
+        g2.drawRect(0, 0, GameView.DEFAULT_VIEW_SIZE, GameView.DEFAULT_VIEW_SIZE);
+        System.out.println(cellspan);
+        System.out.println("Maze: "+maze.length);
+        for(int row = 0; row < cellspan; row++) {
+        	for (int col = 0; col < cellspan; col++){  
+        		int x1 = col * size;
+        		int y1 = row * size;
+        		
+        		char ch = 'X';
+        		ch = maze[row][col].getNodeType();
+        	
+       		
+        		if (zoomOut){
+        			if(ch == 'E'){
+						g2.setColor(Color.RED);
+						g2.fillRect(x1, y1, size, size);
+					}
+					if(ch == 'F'){
+						g2.setColor(Color.BLACK);
+						g2.fillRect(x1, y1, size, size);
+					}
+					if(ch == 'D'){
+						g2.setColor(Color.BLUE);
+						g2.fillRect(x1, y1, size, size);
+					}
+					if (row == currentRow && col == currentCol){
+						g2.setColor(Color.MAGENTA);
+						g2.fillRect(x1, y1, size, size);
+					}
+        		}else{
+        			//ch = maze.get(currentRow - cellpadding + row, currentCol - cellpadding + col);
+        			ch = maze[currentRow - cellpadding + row][currentCol - cellpadding + col].getNodeType();
+        			//System.out.println("Ch = " + ch);
+        		}
+        		
+				switch(ch){
+				case 'X'://Hedge
+					imageIndex = 0;
+					break;
+				case 'W'://Sword
+					imageIndex = 1;
+					break;
+				case '?'://Help
+					imageIndex = 2;
+					break;
+				case 'B'://Bomb
+					imageIndex = 3;
+					break;
+				case 'H'://H-bomb
+					imageIndex = 4;
+					break;
+				case 'E':
+					imageIndex = enemyState;
+					break;
+				case 'F':
+					imageIndex = enemyBossState;
+					break;
+				case 'D':
+					imageIndex = 9;
+					break;
+				case 'T':
+					imageIndex = 10;
+					break;
+				case 'M':
+					imageIndex = 11;
+					break;
+				case 'A':
+					imageIndex = 12;
+					break;
+				case 'P':
+					imageIndex = playerState;
+					break;
+				case 'G':
+					imageIndex = 13;
+					break;
+				case 'Z':
+					imageIndex = 14;
+					break;
+				case 'L':
+					imageIndex = 15;
+					break;
+				case 'O':
+					imageIndex = 16;
+					break;
+				case 'N':
+					imageIndex = 17;
+					break;
+				default:
+					imageIndex = -1;
+					break;
+			}
+        		
+        		
+        		//imageIndex = id;
+        	//	imageIndex -= offset;
+        		if (imageIndex >= 0){
+        			//g2.drawImage(images[imageIndex], x1, y1, null);
+        			try {
+        				g2.drawImage(sprites[imageIndex].getNext(), x1, y1, null);	
+					} catch (Exception e) {
+						// TODO: handle exception
+						System.out.println(e);
+					}
+        			
+        		}else{
+					if(maze[row][col].getNodeType() == ' '){ // Print blank space grey.
+						g2.setColor(Color.LIGHT_GRAY);
+						g2.fillRect(x1, y1, size, size);
+					}
+        		}
+        		
+        		
+        		if (maze[row][col].getNodeType() == 'T'){
+					g2.setColor(maze[row][col].getColor());
+					g2.fillRect(x1, y1, size, size);
+				}
+
+				if (maze[row][col].isGoalNode() && maze[row][col].getNodeType() != 'P'){
+					g2.setColor(Color.WHITE);
+					g2.fillRect(x1, y1, size, size);
+				}
+        		
+        	}
+        }
+	}
+	
+	public void toggleZoom(){
+		zoomOut = !zoomOut;		
+	}
+
+	public void actionPerformed(ActionEvent e) {	
+		
+		if (enemyState < 0 || enemyState == 7){
+			enemyState = 8;
+		}else{
+			enemyState = 7;
+		}
+
+		if (enemyBossState < 0 || enemyBossState == 18){
+			enemyBossState = 19;
+		}else{
+			enemyBossState = 18;
+		}
+
+		if(e.getSource() == timer){
+			repaint();
+		}
+		
+	} 
+	
+	private void init() {
+		
+		
+		
+		/*
+		 * player = new ControlledSprite("Main Player", 3, "resources/images/player/d1.png", "resources/images/player/d2.png", "resources/images/player/d3.png", "resources/images/player/l1.png", "resources/images/player/l2.png", "resources/images/player/l3.png", "resources/images/player/r1.png", "resources/images/player/r2.png", "resources/images/player/r3.png");
+		
+		Sprite[] sprites = new Sprite[IMAGE_COUNT];
+		sprites[0] = new Sprite("Hedge", 1, "resources/images/objects/hedge.png");
+		sprites[1] = new Sprite("Sword", 1, "resources/images/objects/sword.png");
+		sprites[2] = new Sprite("Help", 1, "resources/images/objects/help.png");
+		sprites[3] = new Sprite("Bomb", 1, "resources/images/objects/bomb.png");
+		sprites[4] = new Sprite("Hydrogen Bomb", 1, "resources/images/objects/h_bomb.png");
+		sprites[5] = player;
+		sprites[6] = new Sprite("Black Spider", 2, "resources/images/spiders/black_spider_1.png", "resources/images/spiders/black_spider_2.png");
+		sprites[7] = new Sprite("Blue Spider", 2, "resources/images/spiders/blue_spider_1.png", "resources/images/spiders/blue_spider_2.png");
+		sprites[8] = new Sprite("Brown Spider", 2, "resources/images/spiders/brown_spider_1.png", "resources/images/spiders/brown_spider_2.png");
+		sprites[9] = new Sprite("Green Spider", 2, "resources/images/spiders/green_spider_1.png", "resources/images/spiders/green_spider_2.png");
+		sprites[10] = new Sprite("Grey Spider", 2, "resources/images/spiders/grey_spider_1.png", "resources/images/spiders/grey_spider_2.png");
+		sprites[11] = new Sprite("Orange Spider", 2, "resources/images/spiders/orange_spider_1.png", "resources/images/spiders/orange_spider_2.png");
+		sprites[12] = new Sprite("Red Spider", 2, "resources/images/spiders/red_spider_1.png", "resources/images/spiders/red_spider_2.png");
+		sprites[13] = new Sprite("Yellow Spider", 2, "resources/images/spiders/yellow_spider_1.png", "resources/images/spiders/yellow_spider_2.png");
+		return sprites;
+		 */
+		
+		
+		
+		// Initializing the images
+		images = new BufferedImage[20];
+		
+		try {
+			images[0] = ImageIO.read(new java.io.File("resources/images/objects/hedge.png"));
+			images[1] = ImageIO.read(new java.io.File("resources/images/objects/sword.png"));
+			images[2] = ImageIO.read(new java.io.File("resources/images/objects/help.png"));
+			images[3] = ImageIO.read(new java.io.File("resources/images/objects/bomb.png"));
+			images[4] = ImageIO.read(new java.io.File("resources/images/objects/h_bomb.png"));
+			images[5] = ImageIO.read(new java.io.File("resources/images/player/d1.png"));
+			images[6] = ImageIO.read(new java.io.File("resources/images/player/d2.png"));
+			images[7] = ImageIO.read(new java.io.File("resources/images/spiders/red_spider_1.png"));
+			images[8] = ImageIO.read(new java.io.File("resources/images/spiders/red_spider_2.png"));
+			images[9] = ImageIO.read(new java.io.File("resources/images/spiders/blue_spider_2.png"));
+			images[10] = ImageIO.read(new java.io.File("resources/images/spiders/green_spider_1.png")); // Temporary
+			images[11] = ImageIO.read(new java.io.File("resources/images/objects/health.png"));
+			images[12] = ImageIO.read(new java.io.File("resources/images/objects/armor.png"));
+			images[13] = ImageIO.read(new java.io.File("resources/images/objects/goal.png"));
+			images[14] = ImageIO.read(new java.io.File("resources/images/objects/theGoal.jpg"));
+			images[15] = ImageIO.read(new java.io.File("resources/images/objects/lose.png"));
+			images[16] = ImageIO.read(new java.io.File("resources/images/player/d1.png"));
+			images[17] = ImageIO.read(new java.io.File("resources/images/objects/bomb.png"));
+			images[18] = ImageIO.read(new java.io.File("resources/images/spiders/black_spider_1.png"));
+			images[19] = ImageIO.read(new java.io.File("resources/images/spiders/black_spider_2.png"));
+		} catch (IOException error) {
+			System.out.println("Error - " + error);
+		}
+	}
+
+	public int getPlayerState() {
+		return playerState;
+	}
+
+	public void setPlayerState(int playerState) {
+		this.playerState = playerState;
+	}
+}

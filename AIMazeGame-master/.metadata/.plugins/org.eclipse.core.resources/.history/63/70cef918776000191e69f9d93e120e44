@@ -1,0 +1,12 @@
+package ie.gmit.sw.ai;
+
+public class Weapon {
+	private String weaponName;
+	private int damage;
+	
+	public Weapon(String weaponName, int damage) {
+		this.weaponName = weaponName;
+		this.damage = damage;
+	}
+	
+}

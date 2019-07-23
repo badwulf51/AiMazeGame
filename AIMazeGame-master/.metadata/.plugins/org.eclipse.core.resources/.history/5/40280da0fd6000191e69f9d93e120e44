@@ -1,0 +1,65 @@
+package ie.gmit.sw.ai;
+
+import javax.imageio.*;
+import java.awt.image.*;
+public class ControlledSprite extends Sprite{	
+	
+	private Weapon weapon;
+    private int rowPos;
+    private int colPos;
+    private boolean gameOver;
+    private int health;
+    private int armor;
+    
+	public ControlledSprite(String name, int frames, Weapon weapon, String... images) throws Exception{
+		super(name, frames, images);
+		this.weapon = weapon;
+	}
+	
+	public void setDirection(Direction d){
+		switch(d.getOrientation()) {
+		case 0: case 1:
+			super.setImageIndex(0); //UP or DOWN
+			break;
+		case 2:
+			super.setImageIndex(1);  //LEFT
+			break;
+		case 3:
+			super.setImageIndex(2);  //LEFT
+		default:
+			break; //Ignore...
+		}		
+	}
+
+	public Weapon getWeapon() {
+		return weapon;
+	}
+
+	public void setWeapon(Weapon weapon) {
+		this.weapon = weapon;
+	}
+
+	public int getRowPos() {
+		return rowPos;
+	}
+
+	public void setRowPos(int rowPos) {
+		this.rowPos = rowPos;
+	}
+
+	public int getColPos() {
+		return colPos;
+	}
+
+	public void setColPos(int colPos) {
+		this.colPos = colPos;
+	}
+
+	public boolean isGameOver() {
+		return gameOver;
+	}
+
+	public void setGameOver(boolean gameOver) {
+		this.gameOver = gameOver;
+	}
+}

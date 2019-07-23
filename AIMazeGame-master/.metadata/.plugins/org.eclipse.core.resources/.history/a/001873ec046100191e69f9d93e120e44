@@ -1,0 +1,143 @@
+package ie.gmit.sw.ai;
+
+import java.util.Random;
+
+public class Maze {
+	private Node[][] maze; //An array does not lend itself to the type of mazge generation alogs we use in the labs. There are no "walls" to carve...
+	public Maze(int dimension){
+		maze = new char[dimension][dimension];
+		init();
+		buildMaze();
+		
+		int featureNumber = (int)((dimension * dimension) * 0.0001); //Change this value to control the number of objects
+		addFeature('\u0031', '0', featureNumber); //1 is a sword, 0 is a hedge
+		addFeature('\u0032', '0', featureNumber); //2 is help, 0 is a hedge
+		addFeature('\u0033', '0', featureNumber); //3 is a bomb, 0 is a hedge
+		addFeature('\u0034', '0', featureNumber); //4 is a hydrogen bomb, 0 is a hedge
+		
+		featureNumber = (int)((dimension * dimension) * 0.01); //Change this value to control the number of spiders
+		addFeature('\u0036', '0', featureNumber); //6 is a Black Spider, 0 is a hedge
+		addFeature('\u0037', '0', featureNumber); //7 is a Blue Spider, 0 is a hedge
+		addFeature('\u0038', '0', featureNumber); //8 is a Brown Spider, 0 is a hedge
+		addFeature('\u0039', '0', featureNumber); //9 is a Green Spider, 0 is a hedge
+		addFeature('\u003A', '0', featureNumber); //: is a Grey Spider, 0 is a hedge
+		addFeature('\u003B', '0', featureNumber); //; is a Orange Spider, 0 is a hedge
+		addFeature('\u003C', '0', featureNumber); //< is a Red Spider, 0 is a hedge
+		addFeature('\u003D', '0', featureNumber); //= is a Yellow Spider, 0 is a hedge
+		addFeature('\u003E', '0', featureNumber); //= is a Yellow Spider, 0 is a hedge
+	}
+	
+	private void init(){
+		for (int row = 0; row < maze.length; row++){
+			for (int col = 0; col < maze[row].length; col++){
+				maze[row][col] = '0'; //Index 0 is a hedge...
+			}
+		}
+	}
+	
+	private void addFeature(char feature, char replace, int number){
+		int counter = 0;
+		while (counter < 1){ //Keep looping until feature number of items have been added
+		//while (counter < feature){ //Keep looping until feature number of items have been added
+			int row = (int) (maze.length * Math.random());
+			int col = (int) (maze[0].length * Math.random());
+			
+			if (maze[row][col] == replace){
+				maze[row][col] = feature;
+				counter++;
+			}
+		}
+	}
+	
+	private void buildMaze(){ 
+		for (int row = 1; row < maze.length - 1; row++){
+			for (int col = 1; col < maze[row].length - 1; col++){
+				int num = (int) (Math.random() * 10);
+				if (isRoom(row, col)) continue;
+				if (num > 5 && col + 1 < maze[row].length - 1){
+					maze[row][col + 1] = '\u0020'; //\u0020 = 0x20 = 32 (base 10) = SPACE
+				}else {
+					if (row + 1 < maze.length - 1) maze[row + 1][col] = '\u0020';
+				}
+			}
+		}	
+	}
+	
+	private boolean isRoom(int row, int col){ //Flaky and only works half the time, but reduces the number of rooms
+		return row > 1 && maze[row - 1][col] == '\u0020' && maze[row - 1][col + 1] == '\u0020';
+	}
+	
+	public char[][] getMaze(){
+		return this.maze;
+	}
+	
+	public char get(int row, int col){
+		return this.maze[row][col];
+	}
+	
+	public void set(int row, int col, char c){
+		this.maze[row][col] = c;
+	}
+	
+	public int size(){
+		return this.maze.length;
+	}
+	
+	public String toString(){
+		StringBuffer sb = new StringBuffer();
+		for (int row = 0; row < maze.length; row++){
+			for (int col = 0; col < maze[row].length; col++){
+				sb.append(maze[row][col]);
+				if (col < maze[row].length - 1) sb.append(",");
+			}
+			sb.append("\n");
+		}
+		return sb.toString();
+	}
+	
+	public void setGoalNode() { // Randomley set the goal node.
+
+		Random random = new Random();
+		int randRow = 0;
+		int randCol = 0;
+		boolean goalSet = false;
+
+		while (goalSet != true) {
+
+			this.setGoalPos(random.nextInt((2 - 0) + 1) + 0);
+
+			switch (this.getGoalPos()) {
+			case 0:
+				// Creates the nodes on the bottom side of the maze
+				randRow = random.nextInt(((maze.length - 15) - (maze.length - 16)) + 1) + (maze.length - 16);
+				randCol = random.nextInt(((maze[0].length - 3) - 1) + 1) + 1;
+				break;
+			case 1:
+				// Creates the nodes on the right side of the maze
+				randRow = random.nextInt(((maze.length - 15) - 1) + 1) + 1;
+				randCol = random.nextInt(((maze[0].length - 3) - (maze[0].length - 4)) + 1) + (maze[0].length - 4);
+				break;
+			case 2:
+				// Creates the nodes on the top side of the maze
+				randRow = random.nextInt((2 - 1) + 1) + 1;
+				randCol = random.nextInt(((maze[0].length - 3) - 1) + 1) + 1;
+				break;
+			default: // Defaults to left side.
+				randRow = random.nextInt(((maze.length - 15) - 1) + 1) + 1;
+				randCol = random.nextInt(((maze[0].length - 3) - (maze[0].length - 4)) + 1) + (maze[0].length - 4);
+				break;
+			}
+
+			try {
+				if (maze[randRow][randCol].isWalkable()) {
+					maze[randRow][randCol].setGoalNode(true);
+					maze[randRow][randCol].setNodeType('G');
+					maze[randRow][randCol].setWalkable(true);
+					goal = maze[randRow][randCol];
+					goalSet = true;
+				}
+			} catch (Exception e) {
+			}
+		}
+	}
+}

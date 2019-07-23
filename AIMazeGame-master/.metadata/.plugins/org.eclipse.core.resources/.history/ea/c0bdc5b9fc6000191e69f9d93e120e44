@@ -1,0 +1,411 @@
+package ie.gmit.sw.ai;
+
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.Random;
+
+import ie.gmit.sw.ai.searchAlgorithms.*;
+
+public class Spider extends GameCharacter implements Runnable{
+	
+	    private int id;
+	    private int strength;
+	    private int difficulty;
+	    private boolean boss;
+	    private int algorithm;
+	    private Thread instance;
+	    private Node[][] maze;
+	    private ControlledSprite player;
+	    private boolean run;
+	    private int playerRowTemp;
+	    private int playerColTemp;
+	    private int minUpdateTime;
+	    private int maxUpdateTime;
+	    private Node pathGoal;
+	    private AStarTraversator traverse;
+	    private LinkedList<Node> nodeListPath;
+
+	    public Spider() {
+	        super();
+	        setStrength(0);
+	        setDifficulty(0);
+	        setBoss(false);
+	        setAlgorithm(0);
+	    }
+
+	    public Spider(int id, int health, int armor, int strength, int difficulty, boolean boss) {
+	        super(health, armor);
+	        setId(id);
+	        setStrength(strength);
+	        setDifficulty(difficulty);
+	        setBoss(boss);
+	        setAlgorithm(0);
+	    }
+
+	    @Override
+	    public void run() {
+	        while(isRun()){ // Keep moving the spider while it is alive and while the game is on.
+	            try {
+	                if(this.getHealth() <= 0 || getPlayer().isGameOver()){
+	                    setRun(false);
+	                    break;
+	                }
+	                // Make the thread sleep, its different for every enemy making enemies slightly faster or slower
+	                Thread.sleep(new Random().nextInt((getMaxUpdateTime() - getMinUpdateTime()) + 1) + getMinUpdateTime());
+	                switch(getAlgorithm()){
+	                    case 0:
+	                        checkMove(new Random().nextInt((3 - 0) + 1) + 0);
+	                        break;
+	                    case 1:
+	                    	huntPlayer();
+	                        break;
+	                    default:
+	                        checkMove(new Random().nextInt((3 - 0) + 1) + 0);
+	                        break;
+	                }
+
+	            } catch (InterruptedException error) {
+	                System.out.println("Error - " + error);
+	            }
+	        }
+	    }
+
+	   
+	    private boolean isValidMove(int row, int col){
+	        if(getPlayer().isGameOver()) return false;
+	        if((row < 0) || (col < 0) || !(row <= getMaze().length - 1 && col <= getMaze()[row].length - 1)) return false;
+
+	        switch(getMaze()[row][col].getNodeType()){
+	            case ' ':
+	                // Moving the enemy to an empty block
+	                getMaze()[getRowPos()][getColPos()].setNodeType(' ');
+	                getMaze()[row][col].setNodeType('E');
+	                if(this.isBoss())
+	                    getMaze()[row][col].setNodeType('F');
+	                getMaze()[row][col].setEnemyID(getMaze()[getRowPos()][getColPos()].getEnemyID());
+	                getMaze()[getRowPos()][getColPos()].setEnemyID(0);
+	                return true;
+	            case 'P': // Not sure if i need this.
+	                // Starting a battle with the player using the fuzzy logic library
+	                FuzzyBattle fuzzyBattle = new FuzzyBattle();
+	            	//FuzzyBattle fuzzyFight = new FuzzyBattle();
+	                boolean enemyWon = fuzzyFight.startBattle(getPlayer(), this, "fcl/fuzzyFight.fcl");
+	                if(enemyWon == true){
+	                    // The player has lost the game!
+	                    getMaze()[getRowPos()][getColPos()].setNodeType(' ');
+	                    getMaze()[getRowPos()][getColPos()].setEnemyID(0);
+	                    getPlayer().setGameOver(true);
+	                    getMaze()[row][col].setNodeType('L');
+	                    
+	                }else{
+	                    getMaze()[getRowPos()][getColPos()].setNodeType('D');
+	                    if(this.isBoss())
+	                        getMaze()[getRowPos()][getColPos()].setNodeType('L');
+	                    getMaze()[getRowPos()][getColPos()].setEnemyID(0);
+	                    this.setHealth(0);
+	                    
+	                }
+	                return enemyWon;
+	            case 'T':
+	                // Moving enemy over a path to goal node, removing the 'This Way!' block
+	                getMaze()[getRowPos()][getColPos()].setNodeType(' ');
+	                getMaze()[row][col].setNodeType('E');
+	                if(this.isBoss())
+	                    getMaze()[row][col].setNodeType('F');
+	                getMaze()[row][col].setEnemyID(getMaze()[getRowPos()][getColPos()].getEnemyID());
+	                getMaze()[getRowPos()][getColPos()].setEnemyID(0);
+	                return true;
+	            default:
+	                return false;
+	        }
+	    }
+
+	    /**
+	     * Checking what direction the player wants to go in
+	     * @param direction
+	     */
+	    private void checkMove(int direction){
+	        if(this.getHealth() <= 0) return;
+	        // Moving the enemy object to a new position in the maze
+	        switch(direction){
+	            // Going up in the maze
+	            case 0:
+	                if (isValidMove(getRowPos() - 1, getColPos())){
+	                    setRowPos(getRowPos() - 1);
+	                }
+	                break;
+	            // Going down in the maze
+	            case 1:
+	                if (isValidMove(getRowPos() + 1, getColPos())){
+	                    setRowPos(getRowPos() + 1);
+	                }
+	                break;
+	            // Going left in the maze
+	            case 2:
+	                if (isValidMove(getRowPos(), getColPos() - 1)){
+	                    setColPos(getColPos() - 1);
+	                }
+	                break;
+	            // Going right in the maze
+	            case 3:
+	                if (isValidMove(getRowPos(), getColPos() + 1)){
+	                    setColPos(getColPos() + 1);
+	                }
+	                break;
+	            default:
+	                if (isValidMove(getRowPos() + 1, getColPos())){
+	                    setRowPos(getRowPos() + 1);
+	                }
+	                break;
+	        }
+	    }
+
+	    /**
+	     * The A* algorithm search will be used here to find the player
+	     */
+	    private void huntPlayer() {
+	       
+			/*
+			 * If the player has move since the last known location then re-compute
+			 * the path to the current player position
+			 * If the player hasn't moved then use the current calculated position
+			 */
+	        if(getPlayerRowT() != getPlayer().getRowPos() || getPlayerColT() != getPlayer().getColPos()){
+	            setMinUpdateTime(400);
+	            setMaxUpdateTime(500);
+	            setNodeListPath(new LinkedList<Node>());
+	            setPlayerRowT(getPlayer().getRowPos());
+	            setPlayerColT(getPlayer().getColPos());
+	            setTraverse(new AStarTraversator(getMaze()[getPlayer().getRowPos()][getPlayer().getColPos()], false, true));// Here
+	            getTraverse().traverse(getMaze(), getMaze()[getRowPos()][getColPos()]); // Current maze, current node.
+	            // If the search algorithm has found the player then add paths to linked list
+	            if(getTraverse().isFoundGoal()){
+	            	
+	           
+	           
+	                setPathGoal(getTraverse().getPathGoal());
+	                while (getPathGoal() != null){
+	                    getNodeListPath().add(getPathGoal());
+	                    setPathGoal(getPathGoal().getParent());
+	                }
+	                // Revering the collection of paths to the player location & remove enemy node from list
+	                Collections.reverse(getNodeListPath());
+	                getNodeListPath().removeFirst();
+	            }
+	        }
+
+	        // If the path has been found then start moving the enemy towards the player
+	        if(getTraverse().isFoundGoal()){
+
+	            Node nextPath = getNodeListPath().poll();
+	            boolean foundNextPath = false;
+
+				/*
+				 * Continue to loop until the correct position to move to is found
+				 * If the correct move is found then break the current iteration
+				 */
+	            while (nextPath != null && !foundNextPath){
+	            	
+	            	
+	            	
+	            	
+	                // Moving enemy up in the maze
+	                if(nextPath.getRow() == (getRowPos() - 1)){
+	                    if (isValidMove(getRowPos() - 1, getColPos())){
+	                        setRowPos(getRowPos() - 1);
+	                        foundNextPath = true;
+	                        break;
+	                    }
+	                }
+	                // Moving the enemy down in the maze
+	                if(nextPath.getRow() == (getRowPos() + 1)){
+	                    if (isValidMove(getRowPos() + 1, getColPos())){
+	                        setRowPos(getRowPos() + 1);
+	                        foundNextPath = true;
+	                        break;
+	                    }
+	                }
+	                // Moving the enemy left in the maze
+	                if(nextPath.getCol() == (getColPos() - 1)){
+	                    if (isValidMove(getRowPos(), getColPos() - 1)){
+	                        setColPos(getColPos() - 1);
+	                        foundNextPath = true;
+	                        break;
+	                    }
+	                }
+	                // Moving the enemy right in the maze
+	                if(nextPath.getCol() == (getColPos() + 1)){
+	                    if (isValidMove(getRowPos(), getColPos() + 1)){
+	                        setColPos(getColPos() + 1);
+	                        foundNextPath = true;
+	                        break;
+	                    }
+	                }
+	                
+
+					/*
+					 * There is a chance of the enemy getting stuck in the maze
+					 * This check condition handles the problem
+					 */
+	                if(!foundNextPath){
+	                    checkMove(new Random().nextInt((3 - 0) + 1) + 0);
+	                }
+
+					/*
+					 * If the game is already over then stop moving and break loop
+					 */
+	                if(this.getHealth() <= 0 || getPlayer().isGameOver()){
+	                    setRun(false);
+	                    break;
+	                }
+	                
+	            } // End while.
+	        }
+	    }
+
+	    public int getId()
+	    {
+	        return id;
+	    }
+
+	    public void setId(int id) {
+	        this.id = id;
+	    }
+
+	    public int getStrength() {
+	        return strength;
+	    }
+
+	    public void setStrength(int strength) {
+	        this.strength = strength;
+	    }
+
+	    public int getDifficulty() {
+	        return difficulty;
+	    }
+
+	    public void setDifficulty(int difficulty) {
+	        this.difficulty = difficulty;
+	    }
+
+	    public boolean isBoss() {
+	        return boss;
+	    }
+
+	    public void setBoss(boolean boss) {
+	        this.boss = boss;
+	    }
+
+	    public int getAlgorithm() {
+	        return algorithm;
+	    }
+
+	    public void setAlgorithm(int algorithm) {
+	        this.algorithm = algorithm;
+	    }
+
+	    public Thread getInstance() {
+	        return instance;
+	    }
+
+	    public void setInstance(Thread instance) {
+	        this.instance = instance;
+	    }
+
+	    public Node[][] getMaze() {
+	        return maze;
+	    }
+
+	    public void setMaze(Node[][] maze) {
+	        this.maze = maze;
+	    }
+
+	    public ControlledSprite getPlayer() {
+	        return player;
+	    }
+
+	    public void setPlayer(ControlledSprite player) {
+	        this.player = player;
+	    }
+
+	    public boolean isRun() {
+	        return run;
+	    }
+
+	    public void setRun(boolean run) {
+	        this.run = run;
+	    }
+
+	    public int getPlayerRowT() {
+	        return playerRowTemp;
+	    }
+
+	    public void setPlayerRowT(int playerRowT) {
+	        this.playerRowTemp = playerRowT;
+	    }
+
+	    public int getPlayerColT() {
+	        return playerColTemp;
+	    }
+
+	    public void setPlayerColT(int playerColT) {
+	        this.playerColTemp = playerColT;
+	    }
+
+	    public int getPlayerRowTemp() {
+	        return playerRowTemp;
+	    }
+
+	    public void setPlayerRowTemp(int playerRowTemp) {
+	        this.playerRowTemp = playerRowTemp;
+	    }
+
+	    public int getPlayerColTemp() {
+	        return playerColTemp;
+	    }
+
+	    public void setPlayerColTemp(int playerColTemp) {
+	        this.playerColTemp = playerColTemp;
+	    }
+
+	    public int getMinUpdateTime() {
+	        return minUpdateTime;
+	    }
+
+	    public void setMinUpdateTime(int minUpdateTime) {
+	        this.minUpdateTime = minUpdateTime;
+	    }
+
+	    public int getMaxUpdateTime() {
+	        return maxUpdateTime;
+	    }
+
+	    public void setMaxUpdateTime(int maxUpdateTime) {
+	        this.maxUpdateTime = maxUpdateTime;
+	    }
+
+	    public Node getPathGoal() {
+	        return pathGoal;
+	    }
+
+	    public void setPathGoal(Node pathGoal) {
+	        this.pathGoal = pathGoal;
+	    }
+
+	    public AStarTraversator getTraverse() {
+	        return traverse;
+	    }
+
+	    public void setTraverse(AStarTraversator traverse) {
+	        this.traverse = traverse;
+	    }
+
+	    public LinkedList<Node> getNodeListPath() {
+	        return nodeListPath;
+	    }
+
+	    public void setNodeListPath(LinkedList<Node> nodeListPath) {
+	        this.nodeListPath = nodeListPath;
+	}
+
+}
